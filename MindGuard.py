@@ -1,37 +1,111 @@
+"""
+MindGuard - Aplicație mobilă accesibilă pentru gestionarea anxietății la copii cu dizabilități.
+
+Acest modul implementează interfața completă a aplicației MindGuard folosind framework-ul
+Flet (cross-platform UI bazat pe Flutter). Aplicația oferă:
+    - Onboarding personalizat în funcție de tipul de dizabilitate al utilizatorului
+    - Exerciții de respirație ghidate cu animații vizuale și temporizare prin asyncio
+    - Chestionar de auto-evaluare a stării emoționale
+    - Forum comunitar pentru schimb de experiențe
+    - Mod de contrast înalt pentru utilizatori cu deficiențe vizuale severe
+
+Arhitectura aplicației urmează un model unidirecțional simplu:
+    1. Toată starea este centralizată în clasa AppState (Single Source of Truth)
+    2. Acțiunile utilizatorului declanșează modificări ale stării
+    3. Modificările de stare declanșează re-randarea componentelor afectate
+    4. Sistemul de teme (get_colors) returnează paleta activă în funcție de mod
+Acest model este similar cu paradigma reactivă folosită în React sau Flutter.
+
+Autori:
+    - Chirilus Anastasia (Project Manager & UX Designer)
+    - Vatamaniuc Karina (Lead Developer & Content Creator)
+
+Concurs: InfoEducația 2026, Secțiunea Software Utilitar
+Licență: MIT
+Repository: https://github.com/chirilusanastasia-blip/MindGuard
+"""
+
 import flet as ft
 import asyncio
 
-PRIMARY = "#5B5FE6"
-SECONDARY = "#FF7E5F"
-ACCENT = "#26C6A0"
-BG = "#F8FAFF"
-CARD_BG = "#FFFFFF"
-TEXT_PRIMARY = "#1E2140"
-TEXT_SECONDARY = "#374151"
+# === PALETA DE CULORI ===
+# Culorile principale pentru modul normal (interfață prietenoasă pentru copii)
+PRIMARY = "#5B5FE6"        # Mov-albastru — culoarea principală a brand-ului
+SECONDARY = "#FF7E5F"      # Portocaliu cald — folosit pentru accente și CTA-uri
+ACCENT = "#26C6A0"         # Verde-turcoaz — pentru elemente pozitive (success, ok)
+BG = "#F8FAFF"             # Fundal foarte deschis — odihnitor pentru ochi
+CARD_BG = "#FFFFFF"        # Cardurile sunt albe pentru contrast bun cu fundalul
+TEXT_PRIMARY = "#1E2140"   # Text principal — închis dar nu negru pur (mai prietenos)
+TEXT_SECONDARY = "#374151" # Text secundar — gri închis pentru subtitluri și descrieri
+
+# Culorile pentru modul de contrast înalt (utilizatori cu deficiențe vizuale severe)
+# Standard recunoscut: fundal negru + text galben = contrast maxim
 HIGH_CONTRAST_BG = "#000000"
 HIGH_CONTRAST_TEXT = "#FFFF00"
 HIGH_CONTRAST_CARD = "#333333"
 
 
 class AppState:
+    """
+    Stare centralizată a aplicației MindGuard (Single Source of Truth).
+
+    Această clasă încapsulează toate datele necesare pentru funcționarea aplicației:
+    ecranul curent, preferințele utilizatorului (nevoi specifice, contrast înalt),
+    răspunsurile la chestionar, starea exercițiilor active și conținutul forumului.
+
+    Folosirea unei stări centralizate simplifică gestionarea datelor și permite
+    actualizarea coerentă a interfeței la fiecare schimbare. Acest pattern este
+    similar cu cel folosit în React (useState) sau în Redux/MobX.
+
+    Attributes:
+        current_screen (str): Ecranul afișat curent. Valori posibile:
+            "welcome", "accessibility", "questionnaire", "home", "breathing",
+            "active_exercise", "emotions", "sos", "expert", "progress",
+            "about", "community", "emotion_detail".
+        selected_needs (dict): Tipurile de dizabilități selectate de utilizator
+            (visual, hearing, mobility, speech, none). Determină adaptările UI.
+        mood_message (ft.Text): Componenta Flet care afișează mesajul personalizat
+            după selectarea stării emoționale curente.
+        high_contrast (bool): Dacă modul de contrast înalt este activ.
+            Afectează întreaga paletă vizuală prin funcția get_colors().
+        q_anxiety, q_judged, q_helped, q_manage (str): Răspunsurile utilizatorului
+            la cele 4 întrebări ale chestionarului de auto-evaluare.
+        active_exercise (tuple | None): Datele exercițiului de respirație în desfășurare
+            (title, inhale, hold, exhale), sau None dacă niciun exercițiu nu este activ.
+        exercise_phase (str): Faza curentă a exercițiului — "inhale", "hold", "exhale".
+        exercise_remaining (int): Secunde rămase din faza curentă.
+        exercise_cycles (int): Numărul de cicluri complete efectuate.
+        exercise_running (bool): Indicator dacă temporizatorul rulează.
+        exercise_timer_task (asyncio.Task | None): Referință la task-ul asyncio care
+            gestionează temporizarea. CRITIC: trebuie anulat la părăsirea ecranului
+            pentru a evita memory leaks.
+        posts (list[dict]): Lista postărilor din forumul comunitar. Fiecare post conține:
+            user (str), text (str), likes (int), liked (bool).
+    """
+
     def __init__(self):
+        """Inițializează starea cu valorile implicite la prima deschidere a aplicației."""
+        # Ecranul de început este întotdeauna "welcome" (intro pentru utilizatori noi)
         self.current_screen = "welcome"
+        # Nicio nevoie specifică nu este selectată implicit
         self.selected_needs = {"visual": False, "hearing": False, "mobility": False, "speech": False, "none": False}
+        # Componenta Flet pentru afișarea mesajului personalizat (se actualizează dinamic)
         self.mood_message = ft.Text("", size=16, text_align="center")
+        # Modul de contrast normal la prima utilizare
         self.high_contrast = False
-        # răspunsuri chestionar
+        # răspunsuri chestionar (rămân goale până la completare)
         self.q_anxiety = ""
         self.q_judged = ""
         self.q_helped = ""
         self.q_manage = ""
-        # exercițiu activ
+        # exercițiu activ (niciunul la pornire)
         self.active_exercise = None
         self.exercise_phase = "inhale"
         self.exercise_remaining = 0
         self.exercise_cycles = 0
         self.exercise_running = False
         self.exercise_timer_task = None
-        # forum posts
+        # forum posts — date demo pentru a popula forumul la prima utilizare
         self.posts = [
             {"user": "Alex", "text": "I tried the balloon breathing and it really helped me calm down!", "likes": 3,
              "liked": False},
@@ -40,11 +114,28 @@ class AppState:
         ]
 
 
+# Instanța globală a stării — accesată din toate funcțiile aplicației
 state = AppState()
 
 
 def get_colors():
+    """
+    Returnează paleta de culori activă în funcție de modul de contrast.
+
+    Această funcție centralizează tema vizuală a aplicației. Când modul de contrast
+    înalt este activ (state.high_contrast = True), se returnează o paletă cu fundal
+    negru și text galben — standard recunoscut pentru utilizatorii cu deficiențe
+    vizuale severe. Altfel, se returnează paleta normală.
+
+    Avantajul acestei abordări: schimbarea modului de contrast este instantanee
+    pentru întreaga interfață, fără a fi nevoie de logică separată în fiecare ecran.
+
+    Returns:
+        dict: Dicționar cu chei (bg, card, text_primary, text_secondary, primary,
+              secondary, accent, border) și valorile lor în format hexazecimal.
+    """
     if state.high_contrast:
+        # Paletă de contrast înalt — folosită pentru utilizatori cu deficiențe vizuale
         return {
             "bg": HIGH_CONTRAST_BG,
             "card": HIGH_CONTRAST_CARD,
@@ -56,6 +147,7 @@ def get_colors():
             "border": "#FFFF00"
         }
     else:
+        # Paleta normală — interfață prietenoasă pentru toți ceilalți utilizatori
         return {
             "bg": BG,
             "card": CARD_BG,
@@ -69,14 +161,39 @@ def get_colors():
 
 
 def main(page: ft.Page):
+    """
+    Punct de intrare al aplicației MindGuard.
+
+    Funcția este apelată automat de Flet la pornirea aplicației și configurează
+    pagina principală. Definește toate funcțiile interne (callback-uri pentru
+    interacțiunile utilizatorului) și logica de randare a ecranelor.
+
+    Folosirea closure-urilor (funcții definite în interiorul lui main) permite
+    accesul direct la obiectul `page` fără a fi nevoie să-l transmitem explicit
+    fiecărei funcții — design pattern comun în aplicațiile Flet.
+
+    Args:
+        page (ft.Page): Obiectul Flet care reprezintă fereastra aplicației.
+    """
+    # Configurarea inițială a paginii
     page.title = "MindGuard"
     page.padding = 20
     page.bgcolor = BG
-    page.window_width = 400
+    page.window_width = 400   # Dimensiune optimă pentru mobile (portrait)
     page.window_height = 700
-    page.scroll = ft.ScrollMode.ADAPTIVE
+    page.scroll = ft.ScrollMode.ADAPTIVE  # Scroll activat când conținutul depășește înălțimea
 
     def go_to(screen):
+        """
+        Schimbă ecranul curent al aplicației.
+
+        Dacă utilizatorul părăsește un exercițiu activ, oprește task-ul asyncio
+        de temporizare pentru a evita memory leaks și utilizare inutilă a CPU-ului.
+
+        Args:
+            screen (str): Numele ecranului destinație.
+        """
+        # Curățare task asyncio dacă părăsim un exercițiu de respirație
         if screen == "home" and state.current_screen == "active_exercise":
             if state.exercise_timer_task:
                 state.exercise_timer_task.cancel()
@@ -86,6 +203,16 @@ def main(page: ft.Page):
         update_page()
 
     def back():
+        """
+        Implementează butonul "Back" — navigare înapoi în fluxul aplicației.
+
+        Logica de navigare urmează ordinea naturală: welcome → accessibility →
+        questionnaire → home → diversele ecrane. La revenirea din ecranele
+        secundare (breathing, emotions, sos, etc.) se merge înapoi la home.
+
+        Special: la părăsirea unui exercițiu activ, task-ul asyncio este oprit
+        pentru a elibera resursele sistemului.
+        """
         if state.current_screen == "accessibility":
             state.current_screen = "welcome"
         elif state.current_screen == "questionnaire":
@@ -93,6 +220,7 @@ def main(page: ft.Page):
         elif state.current_screen == "home":
             state.current_screen = "questionnaire"
         elif state.current_screen == "active_exercise":
+            # Anulare task asyncio pentru a evita memory leaks
             if state.exercise_timer_task:
                 state.exercise_timer_task.cancel()
                 state.exercise_timer_task = None
@@ -105,17 +233,43 @@ def main(page: ft.Page):
         update_page()
 
     def toggle_need(key):
+        """
+        Gestionează selecția/deselecția tipurilor de nevoi specifice.
+
+        Logică specială:
+            - Dacă utilizatorul selectează "none" (fără nevoi specifice), toate
+              celelalte opțiuni sunt deselectate automat (sunt mutuale).
+            - Dacă selectează orice altă opțiune, "none" este automat deselectat.
+            - Selectarea opțiunii "visual" activează automat modul de contrast înalt.
+
+        Args:
+            key (str): Cheia opțiunii (visual, hearing, mobility, speech, none).
+        """
         if key == "none":
+            # "Fără nevoi specifice" este exclusivă cu celelalte opțiuni
             for k in state.selected_needs:
                 state.selected_needs[k] = False
             state.selected_needs["none"] = True
         else:
+            # Orice altă selecție anulează "none" și togglează opțiunea
             state.selected_needs["none"] = False
             state.selected_needs[key] = not state.selected_needs[key]
+        # Auto-activare mod contrast înalt pentru deficiențe vizuale
         state.high_contrast = state.selected_needs.get("visual", False)
         update_page()
 
     def create_mood_row():
+        """
+        Creează rândul de selecție a stării emoționale curente (mood).
+
+        Afișează 5 emoji-uri colorate corespunzătoare unor stări emoționale
+        (de la fericit la trist). La click pe oricare dintre ele, afișează
+        un mesaj personalizat de încurajare. Aceasta este una dintre primele
+        interacțiuni pe care utilizatorul le are pe ecranul "home".
+
+        Returns:
+            ft.Row: Componenta Flet care conține cele 5 butoane-emoji.
+        """
         moods = [
             (5, "😊", "#10B981", "Happy"),
             (4, "😌", ACCENT, "Calm"),
@@ -146,6 +300,16 @@ def main(page: ft.Page):
         ], alignment=ft.MainAxisAlignment.CENTER, spacing=15)
 
     def create_action_grid():
+        """
+        Creează grila principală de acțiuni de pe ecranul "home".
+
+        Grila conține 7 butoane mari, prietenoase, care duc la principalele
+        funcționalități ale aplicației: exerciții de respirație, învățare
+        despre emoții, SOS, progres, conectare cu experți, despre, comunitate.
+
+        Returns:
+            ft.GridView: Grila cu butoanele de acțiuni.
+        """
         actions = [
             ("Breathe", "🫁", ACCENT, "breathing"),
             ("Learn", "🧠", PRIMARY, "emotions"),
@@ -170,6 +334,19 @@ def main(page: ft.Page):
         return grid
 
     def show_emotion_detail(emoji, title):
+        """
+        Afișează ecranul de detalii pentru o emoție specifică.
+
+        Pentru fiecare emoție (Anxiety, Anger, Sadness, Fear, Overwhelmed,
+        Frustration, Lonely, Hopeful) afișează:
+            - O descriere prietenoasă a emoției
+            - Semnele fizice/comportamentale ale acelei emoții
+            - Sfaturi practice de gestionare adaptate pentru copii cu dizabilități
+
+        Args:
+            emoji (str): Emoticonul care reprezintă emoția.
+            title (str): Numele emoției (ex: "Anxiety", "Anger").
+        """
         emotions_data = {
             "Anxiety": (
                 "Anxiety is your body's natural alarm system. It's trying to protect you! Sometimes the alarm rings too loud, but that's okay.",
@@ -239,6 +416,18 @@ def main(page: ft.Page):
         page.update()
 
     async def start_exercise_timer():
+        """
+        Corutina asyncio care gestionează temporizarea unui exercițiu de respirație.
+
+        Funcționează pe baza unui ciclu de 3 faze: inhale → hold → exhale.
+        Fiecare secundă verifică dacă faza curentă s-a încheiat și trece la
+        următoarea. La sfârșitul fiecărui ciclu complet, incrementează contorul
+        de cicluri și actualizează UI-ul.
+
+        Folosirea asyncio (în loc de threading) permite temporizarea fără a
+        bloca interfața utilizator, integrându-se natural cu loop-ul Flet.
+        Bucla se oprește când state.exercise_running devine False (la stop sau back).
+        """
         if not state.active_exercise:
             return
         title, inhale, hold, exhale = state.active_exercise
@@ -267,6 +456,19 @@ def main(page: ft.Page):
         state.exercise_timer_task = None
 
     def start_exercise(title, inhale, hold, exhale):
+        """
+        Inițializează și pornește un exercițiu nou de respirație.
+
+        Dacă există deja un exercițiu activ, îl oprește pentru a evita conflicte.
+        Apoi setează datele exercițiului nou, navighează la ecranul "active_exercise"
+        și creează task-ul asyncio pentru temporizare.
+
+        Args:
+            title (str): Numele exercițiului (afișat pe ecran).
+            inhale (int): Durata fazei de inspirație, în secunde.
+            hold (int): Durata fazei de reținere, în secunde.
+            exhale (int): Durata fazei de expirație, în secunde.
+        """
         if state.exercise_timer_task:
             state.exercise_timer_task.cancel()
         state.active_exercise = (title, inhale, hold, exhale)
@@ -283,6 +485,12 @@ def main(page: ft.Page):
         state.exercise_timer_task = asyncio.create_task(run())
 
     def stop_exercise():
+        """
+        Oprește exercițiul de respirație curent și revine la lista exercițiilor.
+
+        Anulează task-ul asyncio pentru a elibera resursele și resetează starea
+        exercițiului. Este apelată când utilizatorul apasă butonul "Stop".
+        """
         if state.exercise_timer_task:
             state.exercise_timer_task.cancel()
             state.exercise_timer_task = None
@@ -291,6 +499,18 @@ def main(page: ft.Page):
         go_to("breathing")
 
     def add_post(e, text_input):
+        """
+        Adaugă o postare nouă în forumul comunitar.
+
+        Validează că textul nu este gol (după trim), apoi inserează postarea
+        la începutul listei (most recent first). Postarea aparține "You" — fiindcă
+        aplicația rulează local fără sistem de cont.
+
+        Args:
+            e: Evenimentul Flet care a declanșat funcția (de obicei click pe Post).
+            text_input: Componenta Flet de input care conține textul postării.
+        """
+        # Validare: textul nu trebuie să fie gol
         if text_input.value.strip():
             state.posts.insert(0, {"user": "You", "text": text_input.value.strip(), "likes": 0, "liked": False})
             text_input.value = ""
@@ -300,6 +520,16 @@ def main(page: ft.Page):
             page.update()
 
     def toggle_like(index):
+        """
+        Schimbă starea like-ului pentru o postare (toggle).
+
+        Dacă postarea nu era apreciată, incrementează numărul de like-uri și
+        marchează ca apreciată. Dacă era deja apreciată, decrementează și
+        anulează marcarea.
+
+        Args:
+            index (int): Indexul postării în lista state.posts.
+        """
         if not state.posts[index]["liked"]:
             state.posts[index]["likes"] += 1
             state.posts[index]["liked"] = True
@@ -309,6 +539,18 @@ def main(page: ft.Page):
         update_page()
 
     def update_page():
+        """
+        Re-randează întreaga interfață în funcție de starea curentă.
+
+        Este funcția centrală a aplicației — apelată de fiecare dată când
+        starea se schimbă (navigare, toggle, exercițiu, postare nouă etc.).
+        Verifică valoarea state.current_screen și construiește componentele
+        Flet corespunzătoare ecranului respectiv.
+
+        Această abordare (clear + add) este simplă și sigură pentru o aplicație
+        de dimensiunea aceasta. Pentru aplicații mai mari, s-ar putea optimiza
+        cu diff-uri (actualizare doar a componentelor afectate).
+        """
         colors = get_colors()
         page.bgcolor = colors["bg"]
         page.controls.clear()
