@@ -9,7 +9,7 @@ Flet (cross-platform UI bazat pe Flutter). Aplicația oferă:
     - Forum comunitar pentru schimb de experiențe
     - Mod de contrast înalt pentru utilizatori cu deficiențe vizuale severe
 
-Arhitectura aplicației urmează un model  simplu:
+Arhitectura aplicației urmează un model unidirecțional simplu:
     1. Toată starea este centralizată în clasa AppState (Single Source of Truth)
     2. Acțiunile utilizatorului declanșează modificări ale stării
     3. Modificările de stare declanșează re-randarea componentelor afectate
@@ -43,6 +43,71 @@ TEXT_SECONDARY = "#374151" # Text secundar — gri închis pentru subtitluri și
 HIGH_CONTRAST_BG = "#000000"
 HIGH_CONTRAST_TEXT = "#FFFF00"
 HIGH_CONTRAST_CARD = "#333333"
+
+# === CONSTANTE PENTRU VALIDAREA INPUT-ULUI ===
+# Aceste constante centralizează limitele acceptate pentru datele introduse
+# de utilizator. Sunt folosite în funcțiile de validare pentru a preveni
+# input-uri malicioase sau accidentale (texte foarte lungi, gol, etc.).
+MIN_POST_LENGTH = 3       # Lungime minimă pentru o postare în forum
+MAX_POST_LENGTH = 500     # Lungime maximă (previne spam și texte abuzive)
+MAX_USERNAME_LENGTH = 30  # Lungime maximă pentru numele utilizatorului
+
+# Cuvinte filtrate din forum — o listă de bază. Fiind o aplicație pentru copii,
+# moderarea conținutului este esențială pentru siguranță. Lista poate fi extinsă
+# în viitor, iar într-o etapă ulterioară se va adăuga și moderare automată cu AI.
+FORBIDDEN_WORDS = {
+    "spam", "scam", "hack", "virus",
+    # Notă: în producție această listă ar fi mult mai cuprinzătoare
+    # și ar include și variante cu caractere speciale (l33t speak etc.)
+}
+
+
+def sanitize_text(text, max_length=MAX_POST_LENGTH):
+    """
+    Sanitizează și validează un text introdus de utilizator.
+
+    Această funcție centralizează logica de validare pentru a preveni:
+        - Texte goale sau cu doar spații
+        - Texte prea lungi (atac DoS prin spam de date)
+        - Caractere de control care ar putea cauza probleme la afișare
+        - Cuvinte filtrate (moderare de bază a conținutului)
+
+    Args:
+        text (str): Textul de validat.
+        max_length (int): Lungimea maximă acceptată.
+
+    Returns:
+        tuple: (text_curat, eroare). Dacă text_curat == None, eroarea
+               conține motivul respingerii. Altfel, eroarea == None și
+               text_curat conține versiunea curățată a textului.
+    """
+    # Verificare tip — input-ul trebuie să fie string
+    if not isinstance(text, str):
+        return None, "Input invalid: trebuie să fie text."
+
+    # Eliminăm whitespace de la început și sfârșit
+    cleaned = text.strip()
+
+    # Verificare lungime minimă
+    if len(cleaned) < MIN_POST_LENGTH:
+        return None, f"Textul trebuie să aibă minim {MIN_POST_LENGTH} caractere."
+
+    # Verificare lungime maximă
+    if len(cleaned) > max_length:
+        return None, f"Textul este prea lung (maxim {max_length} caractere)."
+
+    # Eliminăm caractere de control (cu excepția newline și tab) — protecție
+    # împotriva caracterelor invizibile care ar putea cauza probleme la afișare
+    cleaned = "".join(ch for ch in cleaned if ch.isprintable() or ch in "\n\t")
+
+    # Verificare cuvinte interzise (moderare de bază pentru o aplicație de copii)
+    lower_text = cleaned.lower()
+    for word in FORBIDDEN_WORDS:
+        if word in lower_text:
+            return None, "Postarea conține cuvinte nepermise. Te rugăm să o reformulezi."
+
+    return cleaned, None
+
 
 
 class AppState:
@@ -428,32 +493,61 @@ def main(page: ft.Page):
         bloca interfața utilizator, integrându-se natural cu loop-ul Flet.
         Bucla se oprește când state.exercise_running devine False (la stop sau back).
         """
+        # Verificare defensivă — dacă cumva nu există un exercițiu activ, ieșim
         if not state.active_exercise:
             return
-        title, inhale, hold, exhale = state.active_exercise
-        state.exercise_phase = "inhale"
-        state.exercise_remaining = inhale
-        state.exercise_cycles = 0
-        state.exercise_running = True
-        while state.exercise_running:
-            await asyncio.sleep(1)
-            if not state.exercise_running:
-                break
-            if state.exercise_remaining <= 1:
-                if state.exercise_phase == "inhale":
-                    state.exercise_phase = "hold"
-                    state.exercise_remaining = hold
-                elif state.exercise_phase == "hold":
-                    state.exercise_phase = "exhale"
-                    state.exercise_remaining = exhale
-                else:  # exhale
-                    state.exercise_phase = "inhale"
-                    state.exercise_remaining = inhale
-                    state.exercise_cycles += 1
-            else:
-                state.exercise_remaining -= 1
-            update_page()
-        state.exercise_timer_task = None
+
+        try:
+            # Despachetăm datele exercițiului (title, durate pentru fiecare fază)
+            title, inhale, hold, exhale = state.active_exercise
+
+            # Validare durate — protecție împotriva valorilor invalide
+            if any(d <= 0 for d in (inhale, hold, exhale)):
+                print(f"[start_exercise_timer] Durate invalide: {inhale}/{hold}/{exhale}")
+                state.exercise_running = False
+                return
+
+            # Inițializare stare exercițiu
+            state.exercise_phase = "inhale"
+            state.exercise_remaining = inhale
+            state.exercise_cycles = 0
+            state.exercise_running = True
+
+            # Bucla principală — rulează până când utilizatorul oprește exercițiul
+            while state.exercise_running:
+                await asyncio.sleep(1)
+                # Verificare suplimentară după sleep
+                if not state.exercise_running:
+                    break
+                # Tranziție între faze când timpul rămas ajunge la 1
+                if state.exercise_remaining <= 1:
+                    if state.exercise_phase == "inhale":
+                        state.exercise_phase = "hold"
+                        state.exercise_remaining = hold
+                    elif state.exercise_phase == "hold":
+                        state.exercise_phase = "exhale"
+                        state.exercise_remaining = exhale
+                    else:  # exhale → înapoi la inhale, ciclu complet
+                        state.exercise_phase = "inhale"
+                        state.exercise_remaining = inhale
+                        state.exercise_cycles += 1
+                else:
+                    state.exercise_remaining -= 1
+                update_page()
+
+        except asyncio.CancelledError:
+            # Comportament normal — task-ul a fost anulat (Stop sau Back)
+            print("[start_exercise_timer] Exercițiu anulat de utilizator")
+            raise  # Re-raise pentru ca asyncio să marcheze task-ul ca anulat
+
+        except Exception as ex:
+            # Orice altă excepție neașteptată — logăm și oprim safe
+            print(f"[start_exercise_timer] Eroare neașteptată: {ex}")
+            state.exercise_running = False
+
+        finally:
+            # Curățare garantată indiferent de cum se termină corutina
+            state.exercise_timer_task = None
 
     def start_exercise(title, inhale, hold, exhale):
         """
@@ -500,24 +594,54 @@ def main(page: ft.Page):
 
     def add_post(e, text_input):
         """
-        Adaugă o postare nouă în forumul comunitar.
+        Adaugă o postare nouă în forumul comunitar, cu validare completă.
 
-        Validează că textul nu este gol (după trim), apoi inserează postarea
-        la începutul listei (most recent first). Postarea aparține "You" — fiindcă
-        aplicația rulează local fără sistem de cont.
+        Folosește funcția sanitize_text() pentru a valida și curăța input-ul
+        utilizatorului înainte de a-l adăuga în forum. Astfel se previn:
+            - Postări goale sau prea scurte
+            - Spam cu texte foarte lungi (DoS protection)
+            - Caractere de control invizibile
+            - Cuvinte ofensatoare (moderare de bază)
+
+        Tratează posibilele excepții pentru a preveni crash-uri ale aplicației.
 
         Args:
-            e: Evenimentul Flet care a declanșat funcția (de obicei click pe Post).
+            e: Evenimentul Flet care a declanșat funcția (click pe Post).
             text_input: Componenta Flet de input care conține textul postării.
         """
-        # Validare: textul nu trebuie să fie gol
-        if text_input.value.strip():
-            state.posts.insert(0, {"user": "You", "text": text_input.value.strip(), "likes": 0, "liked": False})
+        try:
+            # Validare și sanitizare prin funcția centralizată
+            cleaned_text, error = sanitize_text(text_input.value, MAX_POST_LENGTH)
+
+            if error:
+                # Afișăm mesajul de eroare lângă input
+                text_input.error_text = error
+                page.update()
+                return
+
+            # Input valid — adăugăm postarea la începutul listei
+            state.posts.insert(0, {
+                "user": "You",
+                "text": cleaned_text,
+                "likes": 0,
+                "liked": False
+            })
+            # Resetăm input-ul și eventual mesajul de eroare
             text_input.value = ""
+            text_input.error_text = None
             update_page()
-        else:
-            text_input.error_text = "Please write something"
-            page.update()
+
+        except AttributeError as ex:
+            # Protecție în caz că text_input nu are atributele așteptate
+            print(f"[add_post] Eroare la accesarea atributelor input-ului: {ex}")
+        except Exception as ex:
+            # Catch-all pentru orice altă eroare neașteptată
+            print(f"[add_post] Eroare neașteptată: {ex}")
+            try:
+                text_input.error_text = "A apărut o eroare. Te rugăm să încerci din nou."
+                page.update()
+            except Exception:
+                pass
 
     def toggle_like(index):
         """
@@ -601,7 +725,7 @@ def main(page: ft.Page):
                         HIGH_CONTRAST_CARD if state.high_contrast else "#E8EAF6"),
                     border_radius=20,
                     padding=20,
-                    border=ft.Border.all(2, colors["primary"] if is_sel else "#E5E7EB"),
+                    border=ft.border.all(2, colors["primary"] if is_sel else "#E5E7EB"),
                     on_click=lambda e, k=key: toggle_need(k),
                 )
                 cards.controls.append(card)
@@ -691,11 +815,11 @@ def main(page: ft.Page):
                 content=ft.Row([
                     ft.Text("Welcome back!", size=24, weight="bold", color="white"),
                     ft.Container(ft.Text("🔥 1 day streak", size=14, weight="bold", color=colors["primary"]),
-                                 bgcolor="white", border_radius=16, padding=ft.Padding.symmetric(vertical=10, horizontal=5)),
+                                 bgcolor="white", border_radius=16, padding=ft.padding.symmetric(10, 5)),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 bgcolor=PRIMARY,
                 padding=20,
-                border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
+                border_radius=ft.border_radius.only(bottom_left=20, bottom_right=20),
             )
             page.add(
                 ft.Column([
@@ -709,9 +833,9 @@ def main(page: ft.Page):
                         bgcolor=colors["card"],
                         border_radius=20,
                         padding=20,
-                        margin=ft.Margin.all(20),
+                        margin=ft.margin.all(20),
                     ),
-                    ft.Container(padding=ft.Padding.symmetric(horizontal=20), content=action_grid),
+                    ft.Container(padding=ft.padding.symmetric(horizontal=20), content=action_grid),
                     tip,
                 ], scroll=ft.ScrollMode.ADAPTIVE)
             )
@@ -925,7 +1049,7 @@ def main(page: ft.Page):
                     ft.Text("Your everyday anxiety support companion", size=14, color=colors["text_secondary"]),
                     ft.Container(
                         ft.Text("Social Enterprise", size=12, weight="bold", color="white", text_align="center"),
-                        bgcolor=ACCENT, border_radius=20, padding=ft.Padding.symmetric(vertical=8, horizontal=16)),
+                        bgcolor=ACCENT, border_radius=20, padding=ft.padding.symmetric(8, 16)),
                     ft.Container(content=ft.Column([ft.Text("Our Mission", weight="bold", color=colors["text_primary"]),
                                                     ft.Text(
                                                         "MindGuard is a social enterprise helping children aged 8-14 with disabilities understand, manage, and prevent anxiety. We believe anxiety is a natural response — not something to suppress or fear.",
