@@ -113,13 +113,17 @@ Pentru detalii complete despre proiect, consultați documentele din folderul `do
 
 ### Asistență din partea inteligenței artificiale
 
-Pe parcursul dezvoltării proiectului, am folosit instrumente de inteligență artificială ca asistență în următoarele scopuri:
+Pe parcursul dezvoltării proiectului, am folosit instrumente de inteligență artificială (ChatGPT, DeepSeek, Google Gemini, Claude/Anthropic) ca asistență tehnică în următoarele scopuri:
 
-- **ChatGPT (OpenAI)** — pentru revizii lingvistice ale textelor în limba engleză (proiectul a fost dezvoltat inițial pentru concursul Technovation Girls, care se desfășoară în engleză).
-- **DeepSeek și Google Gemini** — pentru sprijin tehnic în înțelegerea unor concepte de programare, debug și sugestii de implementare pentru anumite funcționalități ale aplicației.
-- **Claude (Anthropic)** — pentru structurarea documentației tehnice, generarea conținutului de referință pentru analiza de piață, planul de dezvoltare, pe baza informațiilor și a viziunii furnizate de echipă.
+- **Structurarea documentației tehnice** — organizarea capitolelor, formularea explicațiilor
+- **Generarea conținutului de referință** pentru analiza de piață și planul de dezvoltare
+- **Asistență în generarea și revizuirea codului sursă** în Python și Flet
+- **Sugestii de implementare** pentru anumite funcționalități (exerciții de respirație cu asyncio, validare input, gestionare excepții)
+- **Debug și explicarea conceptelor tehnice**
 
-**Important:** Ideea proiectului, designul, fluxul de utilizare, deciziile arhitecturale, validarea cu utilizatori reali și prezența pe rețelele sociale aparțin în întregime echipei. Asistența AI a fost folosită ca instrument de productivitate, similar cu utilizarea unui IDE cu autocomplete sau a unei platforme de tipul Stack Overflow.
+Codul a fost dezvoltat colaborativ — am definit cerințele și funcționalitățile, AI-ul a oferit implementări tehnice, iar noi am revizuit, testat și integrat soluțiile.
+
+**Important:** Ideea proiectului, designul, fluxul de utilizare, deciziile despre publicul țintă, validarea conceptului cu specialiști (consilier școlar, studentă psihologie) și prezența pe rețelele sociale aparțin în întregime echipei. Asistența AI a fost folosită ca instrument de productivitate, similar cu utilizarea unui IDE cu autocomplete sau a unei platforme precum Stack Overflow.
 
 ### Validare cu specialiști
 
