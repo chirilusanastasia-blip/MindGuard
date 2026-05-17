@@ -153,7 +153,7 @@ Conceptul aplicației a fost discutat și validat în consultări informale cu:
 
 ## Concursuri și prezență publică
 
-- 🏆 **Technovation Girls 2026** — proiectul a fost înscris (nu s-a calificat la etapa următoare, dar a primit feedback valoros)
+- 🏆 **Technovation Girls 2026** — Proiectul a fost înscris (nu s-a calificat la etapa următoare)
 - 🎯 **InfoEducația 2026** — Secțiunea Software Utilitar
 - 📱 **Instagram**: [@mind_guard_](https://www.instagram.com/mind_guard_/) — comunitate în creștere pe tema sănătății mintale a copiilor
 
