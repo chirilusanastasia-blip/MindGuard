@@ -31,7 +31,7 @@ Acest proiect a fost dezvoltat de o echipă de două eleve de clasa a XI-a:
 
 ## Tehnologii folosite
 
-- **Python 3.14** — limbaj principal
+- **Python 3.13** — limbaj principal
 - **Flet** — framework cross-platform pentru UI (bazat pe Flutter)
 - **asyncio** — pentru gestionarea exercițiilor temporizate
 - **Git + GitHub** — versionare și colaborare
