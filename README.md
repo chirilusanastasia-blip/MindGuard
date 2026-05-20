@@ -160,6 +160,43 @@ Conceptul aplicației a fost discutat și validat în consultări informale cu:
 ## Licență
 
 Acest proiect este disponibil sub [Licența MIT](LICENSE).
+## Surse și referințe
+
+Documentarea proiectului s-a bazat pe următoarele surse:
+
+### Studii și date statistice privind anxietatea la copii cu dizabilități
+
+- Scott, S. et al. — *Mental health in children with disabilities and their families* (PMC, National Library of Medicine, 2024). Raportează o incidență de 30-50% a problemelor de sănătate mintală, inclusiv anxietatea, la copiii cu dizabilități neurodevelopmentale, comparativ cu copiii cu dezvoltare tipică.
+- *Anxiety disorders in children and adolescents with intellectual disability: Prevalence and assessment* (ScienceDirect / Research in Developmental Disabilities). Studiile populaționale identifică rate de 30-40% probleme de sănătate mintală la copiii cu dizabilități intelectuale, față de 8-17% în populația tipică.
+- *Factors associated with depression and anxiety in children with intellectual disabilities* (PubMed, National Library of Medicine). Prevalența problemelor de depresie și/sau anxietate raportată: 35.4%.
+- *Parental Report of Signs of Anxiety and Depression in Children with and Without Disability* — meta-analiză a 44 de țări, publicată în Child Psychiatry & Human Development (Springer, 2023).
+
+### Aplicații analizate în cadrul studiului de piață
+
+- Calm — aplicație de meditație și relaxare (calm.com)
+- Headspace — aplicație de mindfulness (headspace.com)
+- Wysa — chatbot de sprijin emoțional bazat pe AI (wysa.com)
+- MindShift CBT — aplicație de gestionare a anxietății (anxietycanada.com)
+
+### Documentație tehnică
+
+- Documentația oficială Flet — framework-ul folosit pentru interfață (flet.dev)
+- Documentația oficială Python 3 (docs.python.org)
+- Documentația modulului asyncio din biblioteca standard Python
+
+### Standarde de accesibilitate
+
+- Web Content Accessibility Guidelines (WCAG) 2.1 — World Wide Web Consortium (W3C). Standard internațional pentru accesibilitatea conținutului digital, folosit ca referință pentru modul de contrast înalt al aplicației.
+
+### Asistență din partea inteligenței artificiale
+
+Pe parcursul dezvoltării au fost folosite instrumente de inteligență artificială (ChatGPT, DeepSeek, Google Gemini, Claude/Anthropic) ca asistență tehnică — detaliile complete sunt descrise în secțiunea "Asistență din partea inteligenței artificiale" de mai sus.
+
+### Resurse tehnice (biblioteci)
+
+- Flet 0.27.6 — licență Apache 2.0
+- Python 3.13 și biblioteca standard (asyncio) — licență PSF
+- Git și GitHub — sistem de versionare și platformă de colaborare
 
 ## Contact
 
