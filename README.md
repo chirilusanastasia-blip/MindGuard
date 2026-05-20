@@ -18,7 +18,7 @@ Misiunea noastră: să facem sprijinul pentru sănătatea mintală incluziv, ast
 Acest proiect a fost dezvoltat de o echipă de două eleve de clasa a XI-a:
 
 - **Chirilus Anastasia** — Project Manager, UX Design, cercetare utilizatori, implementare Python/Flet
-- **Vatamaniuc Karina** — Lead Developer, documentație, Content Creator,  arhitectură tehnică,
+- **Vatamaniuc Karina** — Lead Developer, documentație, Content Creator,  arhitectură tehnică
 
 ## Funcționalități principale
 
