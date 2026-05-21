@@ -123,7 +123,7 @@ Pe parcursul dezvoltării proiectului, am folosit instrumente de inteligență a
 
 Codul a fost dezvoltat colaborativ — am definit cerințele și funcționalitățile, AI-ul a oferit implementări tehnice, iar noi am revizuit, testat și integrat soluțiile.
 
-**Important:** Ideea proiectului, designul, fluxul de utilizare, deciziile despre publicul țintă, validarea conceptului cu specialiști (consilier școlar, studentă psihologie) și prezența pe rețelele sociale aparțin în întregime echipei. Asistența AI a fost folosită ca instrument de productivitate, similar cu utilizarea unui IDE cu autocomplete sau a unei platforme precum Stack Overflow.
+**Important:** Ideea proiectului, designul, fluxul de utilizare, deciziile despre publicul țintă, validarea conceptului cu specialiști (consilier școlar, studentă psihologie) și prezența pe rețelele sociale aparțin în întregime echipei. Asistența AI a fost folosită ca instrument de productivitate.
 
 ### Validare cu specialiști
 
@@ -143,8 +143,8 @@ Conceptul aplicației a fost discutat și validat în consultări informale cu:
 ### Pe termen mediu (toamnă 2026)
 - 10+ exerciții noi de respirație și relaxare
 - Lecții educaționale despre emoții
-- Animații pentru limba semnelor românească
-- Traducere în limba engleză
+- Animații pentru limba semnelor
+
 
 ### Pe termen lung (2027)
 - Publicare pe Google Play Store și Apple App Store
