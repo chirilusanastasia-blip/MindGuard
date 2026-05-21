@@ -573,10 +573,8 @@ def main(page: ft.Page):
         state.current_screen = "active_exercise"
         update_page()
 
-        async def run():
-            await start_exercise_timer()
+        state.exercise_timer_task = page.run_task(start_exercise_timer)
 
-        state.exercise_timer_task = asyncio.create_task(run())
 
     def stop_exercise():
         """
